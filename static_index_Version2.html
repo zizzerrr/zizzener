@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>XSS Bug Bounty Scanner</title>
+    <style>
+        body {font-family: Tahoma, Arial; background: #f8f9fa; margin: 0; padding: 0;}
+        .container {max-width: 600px; margin: 40px auto; background: #fff; border-radius: 7px; box-shadow: 0 0 10px #ddd; padding: 30px;}
+        h1 {text-align: center; color: #333;}
+        input[type=text] {width: 90%; padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;}
+        button {padding: 10px 22px; font-size: 1em; border: none; border-radius: 4px; background: #007bff; color: #fff; cursor: pointer;}
+        button:hover {background: #0056b3;}
+        #results {margin-top: 30px;}
+        code {background: #eee; padding: 2px 4px; border-radius: 3px;}
+        ul {padding-left: 20px;}
+        li {margin-bottom: 10px;}
+        .vuln {background: #ffeaea; border: 1px solid #e74c3c; padding: 10px; margin-bottom: 10px; border-radius: 5px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>فاحص ثغرات XSS</h1>
+        <form id="scanForm">
+            <input type="text" id="url" placeholder="أدخل رابط الموقع (مثال: https://example.com)" required>
+            <button type="submit">فحص</button>
+        </form>
+        <div id="results"></div>
+    </div>
+    <script>
+        document.getElementById('scanForm').onsubmit = async function(e){
+            e.preventDefault();
+            document.getElementById('results').innerHTML = "<b>جاري الفحص...</b>";
+            const url = document.getElementById('url').value;
+            try {
+                const res = await fetch('/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const data = await res.json();
+                if(data.error){
+                    document.getElementById('results').innerHTML = `<span style="color:red">${data.error}</span>`;
+                    return;
+                }
+                if(data.total > 0){
+                    let html = `<b>تم العثور على <span style='color:red'>${data.total}</span> ثغرة XSS:</b><ul>`;
+                    data.findings.forEach(f => {
+                        html += `<li class="vuln">[${f.type === 'form' ? 'فورم' : 'باراميتر رابط'}] في <b>${f.url}</b><br>
+                        Payload: <code>${f.payload}</code>
+                        ${f.type === 'form' ? `<br>Action: <code>${f.form_action}</code>` : ''}
+                        </li>`;
+                    });
+                    html += "</ul>";
+                    document.getElementById('results').innerHTML = html;
+                } else {
+                    document.getElementById('results').innerHTML = "<span style='color:green'>لم يتم العثور على ثغرات XSS</span>";
+                }
+            } catch(e){
+                document.getElementById('results').innerHTML = "<span style='color:red'>حدث خطأ أثناء الفحص</span>";
+            }
+        }
+    </script>
+</body>
+</html>
