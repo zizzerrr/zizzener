@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>XSS Scanner</title>
+</head>
+<body>
+    <h1>XSS Bug Bounty Scanner</h1>
+    <form id="scanForm">
+        <input type="text" id="url" placeholder="أدخل رابط الموقع" size="60" required>
+        <button type="submit">فحص</button>
+    </form>
+    <div id="results"></div>
+    <script>
+        document.getElementById('scanForm').onsubmit = async function(e){
+            e.preventDefault();
+            document.getElementById('results').innerHTML = "جاري الفحص...";
+            const url = document.getElementById('url').value;
+            const res = await fetch('/scan', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({url})
+            });
+            const data = await res.json();
+            if(data.total > 0){
+                let html = `<b>تم العثور على ${data.total} ثغرة XSS:</b><ul>`;
+                data.findings.forEach(f => {
+                    html += `<li>[${f.type}] في <b>${f.url}</b> - payload: <code>${f.payload}</code></li>`;
+                });
+                html += "</ul>";
+                document.getElementById('results').innerHTML = html;
+            } else {
+                document.getElementById('results').innerHTML = "لم يتم العثور على ثغرات XSS";
+            }
+        }
+    </script>
+</body>
+</html>
